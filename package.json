@@ -1,15 +1,25 @@
 {
-  "name": "s13chat-backend",
+  "name": "dalchat-backend",
   "version": "1.0.0",
-  "description": "Backend for S13Chat global chat",
+  "description": "DALChat Node backend hosted on Vercel",
   "type": "module",
-  "main": "server.js",
+  "main": "api/server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "vercel dev"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "body-parser": "^1.20.2"
-  }
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "express",
+    "vercel",
+    "chat",
+    "backend"
+  ],
+  "author": "Dallas Miller",
+  "license": "MIT"
 }
