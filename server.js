@@ -1,54 +1,58 @@
-// server.ts
-import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
+// server.js
+import express from "express";
+import cors from "cors";
 
-console.log("✅ S13Chat Deno backend running...");
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+
+console.log("✅ DALChat Node backend running...");
 
 // In-memory storage for servers and messages
 const servers = {};
 
-// Start HTTP server
-serve(async (req) => {
-  const url = new URL(req.url);
-  const path = url.pathname;
+// ===== GET /data -> fetch all servers & messages
+app.get("/data", (req, res) => {
+  res.json(servers);
+});
 
-  // ===== GET /data -> fetch all servers & messages
-  if (req.method === "GET" && path === "/data") {
-    return new Response(JSON.stringify(servers), {
-      headers: { "Content-Type": "application/json" },
+// ===== POST /server -> create new server
+app.post("/server", (req, res) => {
+  try {
+    const { server } = req.body;
+    if (!server) throw new Error("No server name provided");
+    if (!servers[server]) servers[server] = { messages: [] };
+    res.json({ success: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ===== POST /message -> send message
+app.post("/message", (req, res) => {
+  try {
+    const { server, username, text } = req.body;
+    if (!server || !username || !text) throw new Error("Missing fields");
+    if (!servers[server]) servers[server] = { messages: [] };
+    servers[server].messages.push({
+      username,
+      text,
+      time: new Date().toISOString(),
     });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
   }
+});
 
-  // ===== POST /server -> create new server
-  if (req.method === "POST" && path === "/server") {
-    try {
-      const body = await req.json();
-      const { server } = body;
-      if (!server) throw new Error("No server name provided");
-      if (!servers[server]) servers[server] = { messages: [] };
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 400 });
-    }
-  }
+// ===== 404 for other routes
+app.use((req, res) => {
+  res.status(404).json({ error: "Not Found" });
+});
 
-  // ===== POST /message -> send message
-  if (req.method === "POST" && path === "/message") {
-    try {
-      const body = await req.json();
-      const { server, username, text } = body;
-      if (!server || !username || !text) throw new Error("Missing fields");
-      if (!servers[server]) servers[server] = { messages: [] };
-      servers[server].messages.push({ username, text, time: new Date().toISOString() });
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 400 });
-    }
-  }
-
-  // ===== 404 for other routes
-  return new Response(JSON.stringify({ error: "Not Found" }), { status: 404 });
+// Start the server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
