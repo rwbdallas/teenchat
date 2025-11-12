@@ -5,54 +5,57 @@ import cors from "cors";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ===== Middleware =====
 app.use(cors());
 app.use(express.json());
 
-console.log("✅ DALChat Node backend running...");
+console.log("✅ DALChat Node backend initialized...");
 
-// In-memory storage for servers and messages
+// ===== In-memory storage =====
 const servers = {};
 
-// ===== GET /data -> fetch all servers & messages
+// ===== Routes =====
+
+// GET /data -> fetch all servers & messages
 app.get("/data", (req, res) => {
   res.json(servers);
 });
 
-// ===== POST /server -> create new server
+// POST /server -> create new server
 app.post("/server", (req, res) => {
-  try {
-    const { server } = req.body;
-    if (!server) throw new Error("No server name provided");
-    if (!servers[server]) servers[server] = { messages: [] };
-    res.json({ success: true });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
+  const { server } = req.body;
+  if (!server) {
+    return res.status(400).json({ error: "No server name provided" });
   }
+  if (!servers[server]) {
+    servers[server] = { messages: [] };
+  }
+  res.json({ success: true, server });
 });
 
-// ===== POST /message -> send message
+// POST /message -> send message to a server
 app.post("/message", (req, res) => {
-  try {
-    const { server, username, text } = req.body;
-    if (!server || !username || !text) throw new Error("Missing fields");
-    if (!servers[server]) servers[server] = { messages: [] };
-    servers[server].messages.push({
-      username,
-      text,
-      time: new Date().toISOString(),
-    });
-    res.json({ success: true });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
+  const { server, username, text } = req.body;
+  if (!server || !username || !text) {
+    return res.status(400).json({ error: "Missing fields" });
   }
+  if (!servers[server]) {
+    servers[server] = { messages: [] };
+  }
+  servers[server].messages.push({
+    username,
+    text,
+    time: new Date().toISOString(),
+  });
+  res.json({ success: true });
 });
 
-// ===== 404 for other routes
+// ===== 404 handler =====
 app.use((req, res) => {
   res.status(404).json({ error: "Not Found" });
 });
 
-// Start the server
+// ===== Start server =====
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
