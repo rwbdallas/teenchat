@@ -4,7 +4,7 @@ import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 console.log("✅ S13Chat Deno backend running...");
 
 // In-memory storage for servers and messages
-const servers: Record<string, { messages: Array<{ username: string; text: string; time: string }> }> = {};
+const servers = {};
 
 // Start HTTP server
 serve(async (req) => {
