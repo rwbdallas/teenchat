@@ -13,14 +13,9 @@ let currentChannel = null
 let messagesChannel = null
 let members = {}
 
-// ---------- Auth ----------
+// ---------- Auth (Guest) ----------
 async function guestLogin(displayName = "Guest") {
-  const { data, error } = await supabase.auth.signUp({
-    email: `guest-${Date.now()}@s13chat.io`,
-    password: Math.random().toString(36).slice(-8),
-  })
-  if (error) console.warn("Guest login failed, using anon:", error.message)
-  currentUser = data?.user || { id: `guest-${Date.now()}`, display_name: displayName }
+  currentUser = { id: `guest-${Date.now()}`, display_name: displayName }
   members[currentUser.id] = displayName
   updateMembersUI()
   loadServers()
@@ -28,11 +23,17 @@ async function guestLogin(displayName = "Guest") {
 
 // ---------- Servers ----------
 async function loadServers() {
-  const { data, error } = await supabase.from('servers').select('*').order('created_at', { ascending: true })
+  const { data, error } = await supabase
+    .from('servers')
+    .select('*')
+    .order('created_at', { ascending: true })
+
   if (error) return console.error(error)
 
   const serverContainer = document.querySelector('.server-list')
+  if (!serverContainer) return
   serverContainer.innerHTML = ''
+
   data.forEach(server => {
     const btn = document.createElement('div')
     btn.className = 'server-btn'
@@ -42,10 +43,11 @@ async function loadServers() {
   })
 }
 
-// Create server
 async function createServer(name) {
   if (!currentUser) return alert('Login first')
-  const { data, error } = await supabase.from('servers').insert([{ name, created_by: currentUser.id }])
+  const { data, error } = await supabase
+    .from('servers')
+    .insert([{ name, created_by: currentUser.id }])
   if (error) return alert(error.message)
   loadServers()
 }
@@ -53,7 +55,6 @@ async function createServer(name) {
 // ---------- Channels ----------
 function selectServer(server) {
   currentServer = server
-  // TODO: if you implement channels table, load them here
   currentChannel = { id: server.id, name: "general" } // default channel
   loadMessages(currentChannel.id)
 }
@@ -62,28 +63,32 @@ function selectServer(server) {
 async function loadMessages(channelId) {
   const { data, error } = await supabase
     .from('messages')
-    .select('id, body, created_at, user_id, profiles(display_name)')
+    .select('id, body, created_at, user_id')
     .eq('server_id', channelId)
     .order('created_at', { ascending: true })
+
   if (error) return console.error(error)
 
   const chatContainer = document.querySelector('.chat-messages')
+  if (!chatContainer) return
   chatContainer.innerHTML = ''
+
   data.forEach(msg => appendMessage(msg))
   subscribeMessages(channelId)
 }
 
 function appendMessage(msg) {
   const chatContainer = document.querySelector('.chat-messages')
+  if (!chatContainer) return
+
   const div = document.createElement('div')
   div.className = 'chat-message'
-  const name = msg.profiles?.display_name || members[msg.user_id] || 'Unknown'
+  const name = members[msg.user_id] || 'Unknown'
   div.textContent = `[${new Date(msg.created_at).toLocaleTimeString()}] ${name}: ${msg.body}`
   chatContainer.appendChild(div)
   chatContainer.scrollTop = chatContainer.scrollHeight
 }
 
-// Send message
 async function sendMessage(body) {
   if (!currentUser || !currentChannel) return
   const { error } = await supabase.from('messages').insert([{
@@ -96,8 +101,11 @@ async function sendMessage(body) {
 
 // ---------- Realtime ----------
 function subscribeMessages(channelId) {
-  if (messagesChannel) messagesChannel.unsubscribe()
-  messagesChannel = supabase.channel('messages')
+  if (messagesChannel) {
+    messagesChannel.unsubscribe()
+  }
+
+  messagesChannel = supabase.channel(`messages-${channelId}`)
     .on('postgres_changes', {
       event: 'INSERT',
       schema: 'public',
@@ -129,11 +137,12 @@ document.querySelector('.guest-login-btn')?.addEventListener('click', () => gues
 document.querySelector('.create-server-btn')?.addEventListener('click', () => {
   const input = document.querySelector('.create-server-input')
   if (input?.value) createServer(input.value)
+  input.value = ''
 })
 
-// Send message
+// Send message on Enter
 document.querySelector('.chat-input')?.addEventListener('keypress', e => {
-  if (e.key === 'Enter') {
+  if (e.key === 'Enter' && e.target.value.trim() !== '') {
     sendMessage(e.target.value)
     e.target.value = ''
   }
@@ -141,4 +150,3 @@ document.querySelector('.chat-input')?.addEventListener('keypress', e => {
 
 // ---------- Initial Load ----------
 guestLogin("Guest")
-
