@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>S13Chat — Discord-style</title>
+  <meta name="description" content="S13Chat — Discord-style chat using JSONBin backend" />
+  <link rel="stylesheet" href="style.css" />
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div id="app" class="app-root">
+
+    <!-- ===== Left: servers column (compact circles) ===== -->
+    <nav class="servers-col" aria-label="Servers">
+      <div class="brand-compact" title="S13Chat">
+        <span class="brand-logo" aria-hidden="true">S13</span>
+      </div>
+
+      <ul id="compactServerList" class="compact-server-list" role="list">
+        <!-- JS will populate server icons here. Example fallback: -->
+        <li class="server-icon active" data-server-id="default" role="button" tabindex="0" title="General server">
+          <span class="server-initial">G</span>
+        </li>
+      </ul>
+
+      <div class="servers-col-actions">
+        <button id="discoverBtn" class="btn-circle" title="Discover servers" aria-haspopup="dialog" aria-controls="discoverModal">🔎</button>
+        <button id="createServerBtn" class="btn-circle" title="Create server" aria-haspopup="dialog" aria-controls="createServerModal">＋</button>
+      </div>
+    </nav>
+
+    <!-- ===== Middle: server sidebar with channels ===== -->
+    <aside class="server-sidebar" aria-label="Server sidebar">
+      <header class="server-header">
+        <div class="server-name-wrap">
+          <h1 id="serverName" class="server-name">General</h1>
+          <button id="serverOptionsBtn" class="btn-flat" title="Server settings">⋯</button>
+        </div>
+
+        <div class="server-search">
+          <input id="globalSearch" class="input search" type="search" placeholder="Search messages, users, channels..." aria-label="Search messages, users, channels" />
+        </div>
+      </header>
+
+      <section class="channels-section" aria-label="Channels">
+        <div class="channels-header">
+          <h2 class="channels-title">Channels</h2>
+          <button id="addChannelBtn" class="btn-small" title="Create channel">＋</button>
+        </div>
+
+        <ul id="channelList" class="channel-list" role="list">
+          <!-- JS will populate channels from JSONBin -->
+          <li class="channel-item active" data-channel-id="1" role="button" tabindex="0"># general</li>
+          <li class="channel-item" data-channel-id="2" role="button" tabindex="0"># announcements</li>
+          <li class="channel-item" data-channel-id="3" role="button" tabindex="0"># dev-chat</li>
+        </ul>
+      </section>
+
+      <section class="server-info" aria-label="Server info">
+        <div class="member-count">Members: <span id="memberCount">1</span></div>
+        <button id="joinServerBtn" class="btn-primary">Join Server</button>
+      </section>
+
+      <footer class="sidebar-footer">
+        <div class="user-mini" id="userMini">
+          <img src="https://via.placeholder.com/34" alt="avatar" class="avatar-sm" />
+          <div class="user-mini-meta">
+            <span id="userName">Guest</span>
+            <button id="signInBtn" class="btn-link">Sign in</button>
+          </div>
+        </div>
+      </footer>
+    </aside>
+
+    <!-- ===== Right/middle: main chat panel ===== -->
+    <main class="chat-panel" role="main" aria-label="Chat">
+      <header class="chat-header">
+        <div class="chat-header-left">
+          <h2 id="channelTitle"># general</h2>
+          <p id="channelDesc" class="muted">Welcome to the General channel</p>
+        </div>
+
+        <div class="chat-header-right">
+          <button id="pinBtn" class="btn-flat" title="Pinned messages">📌</button>
+          <button id="membersToggleBtn" class="btn-flat" title="Show members">👥</button>
+        </div>
+      </header>
+
+      <section id="messagesWrap" class="messages-wrap" aria-live="polite">
+        <ul id="messagesList" class="messages-list" role="list">
+          <!-- Messages will be inserted here by JS -->
+          <!-- Example message (fallback static) -->
+          <li class="message" data-message-id="m-1" role="article">
+            <img class="msg-avatar" src="https://via.placeholder.com/40" alt="avatar">
+            <div class="msg-body">
+              <div class="msg-meta">
+                <span class="msg-author">System</span>
+                <span class="msg-time">just now</span>
+              </div>
+              <div class="msg-text">Welcome to S13Chat — say hi!</div>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <div class="composer" aria-label="Message composer">
+        <div class="composer-tools">
+          <button id="emojiBtn" class="btn-circle" title="Emoji">😊</button>
+          <button id="attachBtn" class="btn-circle" title="Attach file">📎</button>
+        </div>
+        <form id="messageForm" class="message-form" autocomplete="off">
+          <input id="messageInput" class="input message-input" name="message" type="text" placeholder="Message #general" aria-label="Message input" />
+          <button id="sendBtn" class="btn-primary" type="submit">Send</button>
+        </form>
+      </div>
+    </main>
+
+    <!-- ===== Far right: members / server details panel ===== -->
+    <aside id="rightPanel" class="right-panel" aria-label="Members and server details">
+      <header class="right-header">
+        <h3>Members</h3>
+        <div class="right-actions">
+          <button id="searchMembersBtn" class="btn-flat" title="Search members">🔎</button>
+        </div>
+      </header>
+
+      <div class="members-wrap" id="membersWrap">
+        <ul id="memberList" class="member-list" role="list">
+          <!-- JS will populate member list -->
+          <li class="member-item">
+            <img class="member-avatar" src="https://via.placeholder.com/28" alt="avatar">
+            <div class="member-meta">
+              <span class="member-name">Guest</span>
+              <span class="member-presence muted">online</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <footer class="right-footer">
+        <div class="server-stats muted">Server ID: <span id="serverId">default</span></div>
+      </footer>
+    </aside>
+
+    <!-- ===== Discover modal (search & join servers) ===== -->
+    <div id="discoverModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="discoverTitle">
+      <div class="modal-panel">
+        <header class="modal-header">
+          <h2 id="discoverTitle">Discover servers</h2>
+          <button class="modal-close" data-action="close" aria-label="Close discover">✕</button>
+        </header>
+
+        <div class="modal-body">
+          <div class="discover-search">
+            <input id="discoverSearchInput" class="input" type="search" placeholder="Search servers by name or tag..." />
+          </div>
+
+          <div id="discoverResults" class="discover-results">
+            <!-- JS will populate server cards from JSONBin 'public servers' bin -->
+            <!-- Example server card -->
+            <div class="server-card" data-server-id="public-1">
+              <div class="server-card-left">
+                <div class="server-icon">P</div>
+              </div>
+              <div class="server-card-body">
+                <div class="server-card-name">Public Server</div>
+                <div class="server-card-meta muted">Public • 24 members</div>
+              </div>
+              <div class="server-card-actions">
+                <button class="btn-join" data-action="join" data-server-id="public-1">Join</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <small class="muted">Search pulls results from JSONBin public servers list.</small>
+        </footer>
+      </div>
+    </div>
+
+    <!-- ===== Create Server modal (skeleton) ===== -->
+    <div id="createServerModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="createServerTitle">
+      <div class="modal-panel">
+        <header class="modal-header">
+          <h2 id="createServerTitle">Create a server</h2>
+          <button class="modal-close" data-action="close" aria-label="Close create server">✕</button>
+        </header>
+
+        <form id="createServerForm" class="modal-body">
+          <label>
+            Server name
+            <input id="newServerName" class="input" type="text" name="name" required minlength="2" placeholder="Server name" />
+          </label>
+
+          <label>
+            Description (optional)
+            <input id="newServerDesc" class="input" type="text" name="description" placeholder="Short description" />
+          </label>
+
+          <label>
+            Visibility
+            <select id="newServerVisibility" class="input" name="visibility">
+              <option value="public">Public</option>
+              <option value="private">Private (invite only)</option>
+            </select>
+          </label>
+
+          <div class="modal-actions">
+            <button type="submit" class="btn-primary">Create server</button>
+            <button type="button" class="btn-flat" data-action="cancel">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== Templates (hidden) ===== -->
+    <template id="tpl-server-icon">
+      <li class="server-icon" role="button" tabindex="0">
+        <span class="server-initial">S</span>
+      </li>
+    </template>
+
+    <template id="tpl-channel-item">
+      <li class="channel-item" role="button" tabindex="0"># channel</li>
+    </template>
+
+    <template id="tpl-message">
+      <li class="message" role="article">
+        <img class="msg-avatar" src="" alt="avatar">
+        <div class="msg-body">
+          <div class="msg-meta">
+            <span class="msg-author">Name</span>
+            <span class="msg-time">time</span>
+          </div>
+          <div class="msg-text">Message text</div>
+        </div>
+      </li>
+    </template>
+
+    <template id="tpl-server-card">
+      <div class="server-card" role="group">
+        <div class="server-card-left"><div class="server-icon">S</div></div>
+        <div class="server-card-body">
+          <div class="server-card-name">Server name</div>
+          <div class="server-card-meta muted">Public • 0 members</div>
+        </div>
+        <div class="server-card-actions">
+          <button class="btn-join">Join</button>
+        </div>
+      </div>
+    </template>
+
+    <!-- ===== JSONBin config note (fill in app.js) ===== -->
+    <!--
+      JSONBin usage plan:
+        - serversBinId: bin with list of server metadata (public + private refs)
+        - server:<id>: each server has its own bin for channels & messages
+        - membersBinId: optional global members bin
+        - API key stored in app.js (do NOT commit to public repo)
+    -->
+
+    <script src="app.js" defer></script>
+  </div>
+</body>
+</html>
