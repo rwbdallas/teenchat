@@ -1,15 +1,13 @@
-// server.js
+// api/server.js
 import express from "express";
 import cors from "cors";
+import { parse } from "url";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // ===== Middleware =====
 app.use(cors());
 app.use(express.json());
-
-console.log("✅ DALChat Node backend initialized...");
 
 // ===== In-memory storage =====
 const servers = {};
@@ -55,7 +53,9 @@ app.use((req, res) => {
   res.status(404).json({ error: "Not Found" });
 });
 
-// ===== Start server =====
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+// ===== Vercel serverless export =====
+export default (req, res) => {
+  const { pathname } = parse(req.url, true);
+  req.url = pathname; // Express needs the pathname to route correctly
+  app(req, res);
+};
