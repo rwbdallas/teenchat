@@ -253,3 +253,66 @@ button:focus, .input:focus, .server-icon:focus { box-shadow: var(--focus-ring); 
 
 /* ---------- print/overflow protections ---------- */
 @media print{ .app-root{ display:block; } }
+
+/* ---------- Role Badges ---------- */
+.role-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  margin-left: 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.role-owner {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #1a1a1a;
+}
+
+.role-admin {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+  color: #ffffff;
+}
+
+.role-moderator {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a7a0 100%);
+  color: #ffffff;
+}
+
+.role-badge-small {
+  display: inline-block;
+  padding: 1px 4px;
+  margin-left: 4px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+/* ---------- Context Menu ---------- */
+.role-context-menu {
+  position: fixed;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  min-width: 160px;
+}
+
+.role-context-menu .menu-item {
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background var(--transition);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.role-context-menu .menu-item:hover {
+  background: rgba(157, 252, 90, 0.1);
+  color: var(--accent);
+}

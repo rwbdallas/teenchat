@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DALChat — Login</title>
+  <link rel="stylesheet" href="auth.css" />
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="brand-logo-large">DAL</div>
+        <h1 id="authTitle">Welcome back!</h1>
+        <p id="authSubtitle" class="muted">We're excited to see you again!</p>
+      </div>
+
+      <form id="authForm" class="auth-form">
+        <div id="signupFields" class="signup-only" style="display: none;">
+          <label>
+            <span class="label-text">Display Name</span>
+            <input id="displayName" class="input-field" type="text" name="displayName" placeholder="Enter your display name" />
+          </label>
+        </div>
+
+        <label>
+          <span class="label-text">Email <span class="required">*</span></span>
+          <input id="email" class="input-field" type="email" name="email" required placeholder="Enter your email" />
+        </label>
+
+        <label>
+          <span class="label-text">Password <span class="required">*</span></span>
+          <input id="password" class="input-field" type="password" name="password" required placeholder="Enter your password" />
+        </label>
+
+        <div id="confirmPasswordField" class="signup-only" style="display: none;">
+          <label>
+            <span class="label-text">Confirm Password <span class="required">*</span></span>
+            <input id="confirmPassword" class="input-field" type="password" name="confirmPassword" placeholder="Confirm your password" />
+          </label>
+        </div>
+
+        <button type="submit" id="authSubmitBtn" class="btn-primary-large">Log In</button>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+      </form>
+
+      <div class="auth-footer">
+        <span id="switchText">Need an account?</span>
+        <button id="switchModeBtn" class="btn-link-primary">Sign Up</button>
+      </div>
+
+      <div class="divider">
+        <span>OR</span>
+      </div>
+
+      <button id="guestBtn" class="btn-guest">Continue as Guest</button>
+    </div>
+  </div>
+
+  <script type="module" src="auth.js"></script>
+</body>
+</html>
