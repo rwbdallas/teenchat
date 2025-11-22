@@ -1,152 +1,342 @@
-// ---------- Supabase Init ----------
-import { createClient } from '@supabase/supabase-js'
-
-const SUPABASE_URL = 'https://tlhupfiqqhipvvxgbxjr.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsaHVwZmlxcWhpcHZ2eGdieGpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5NTYwMzMsImV4cCI6MjA3ODUzMjAzM30.kGefGC0f8oDxO_6vs6azdfeQZzmQxT2WCRVpnSiM60Q'
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-
 // ---------- Global State ----------
 let currentUser = null
 let currentServer = null
 let currentChannel = null
-let messagesChannel = null
 let members = {}
+let pollInterval = null
+
+// API base URL
+const API_BASE = '/api'
 
 // ---------- Auth (Guest) ----------
 async function guestLogin(displayName = "Guest") {
   currentUser = { id: `guest-${Date.now()}`, display_name: displayName }
   members[currentUser.id] = displayName
   updateMembersUI()
-  loadServers()
+  updateUserUI()
+  await loadServers()
 }
 
 // ---------- Servers ----------
 async function loadServers() {
-  const { data, error } = await supabase
-    .from('servers')
-    .select('*')
-    .order('created_at', { ascending: true })
+  try {
+    const response = await fetch(`${API_BASE}/data`)
+    const servers = await response.json()
+    
+    const serverContainer = document.getElementById('compactServerList')
+    if (!serverContainer) return
+    serverContainer.innerHTML = ''
 
-  if (error) return console.error(error)
-
-  const serverContainer = document.querySelector('.server-list')
-  if (!serverContainer) return
-  serverContainer.innerHTML = ''
-
-  data.forEach(server => {
-    const btn = document.createElement('div')
-    btn.className = 'server-btn'
-    btn.textContent = server.name
-    btn.onclick = () => selectServer(server)
-    serverContainer.appendChild(btn)
-  })
+    Object.keys(servers).forEach(serverName => {
+      const li = document.createElement('li')
+      li.className = 'server-icon'
+      li.setAttribute('role', 'button')
+      li.setAttribute('tabindex', '0')
+      li.setAttribute('title', serverName)
+      li.dataset.serverId = serverName
+      
+      const initial = document.createElement('span')
+      initial.className = 'server-initial'
+      initial.textContent = serverName.charAt(0).toUpperCase()
+      
+      li.appendChild(initial)
+      li.onclick = () => selectServer(serverName)
+      serverContainer.appendChild(li)
+    })
+    
+    // Select first server if available
+    const firstServer = Object.keys(servers)[0]
+    if (firstServer) {
+      selectServer(firstServer)
+    }
+  } catch (error) {
+    console.error('Error loading servers:', error)
+  }
 }
 
 async function createServer(name) {
-  if (!currentUser) return alert('Login first')
-  const { data, error } = await supabase
-    .from('servers')
-    .insert([{ name, created_by: currentUser.id }])
-  if (error) return alert(error.message)
-  loadServers()
+  if (!currentUser) {
+    alert('Please login first')
+    return
+  }
+  
+  try {
+    const response = await fetch(`${API_BASE}/server`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ server: name })
+    })
+    
+    const data = await response.json()
+    if (data.success) {
+      await loadServers()
+      selectServer(name)
+    }
+  } catch (error) {
+    console.error('Error creating server:', error)
+    alert('Failed to create server')
+  }
 }
 
 // ---------- Channels ----------
-function selectServer(server) {
-  currentServer = server
-  currentChannel = { id: server.id, name: "general" } // default channel
-  loadMessages(currentChannel.id)
+function selectServer(serverName) {
+  currentServer = serverName
+  currentChannel = 'general'
+  
+  // Update UI
+  const serverNameEl = document.getElementById('serverName')
+  if (serverNameEl) serverNameEl.textContent = serverName
+  
+  const channelTitleEl = document.getElementById('channelTitle')
+  if (channelTitleEl) channelTitleEl.textContent = `# ${currentChannel}`
+  
+  // Update active state
+  document.querySelectorAll('.server-icon').forEach(icon => {
+    icon.classList.remove('active')
+    if (icon.dataset.serverId === serverName) {
+      icon.classList.add('active')
+    }
+  })
+  
+  loadMessages()
 }
 
 // ---------- Messages ----------
-async function loadMessages(channelId) {
-  const { data, error } = await supabase
-    .from('messages')
-    .select('id, body, created_at, user_id')
-    .eq('server_id', channelId)
-    .order('created_at', { ascending: true })
-
-  if (error) return console.error(error)
-
-  const chatContainer = document.querySelector('.chat-messages')
-  if (!chatContainer) return
-  chatContainer.innerHTML = ''
-
-  data.forEach(msg => appendMessage(msg))
-  subscribeMessages(channelId)
+async function loadMessages() {
+  if (!currentServer) return
+  
+  try {
+    const response = await fetch(`${API_BASE}/data`)
+    const servers = await response.json()
+    
+    const messagesList = document.getElementById('messagesList')
+    if (!messagesList) return
+    messagesList.innerHTML = ''
+    
+    const serverData = servers[currentServer]
+    if (serverData && serverData.messages) {
+      serverData.messages.forEach(msg => appendMessage(msg))
+    }
+    
+    // Start polling for new messages
+    startPolling()
+  } catch (error) {
+    console.error('Error loading messages:', error)
+  }
 }
 
 function appendMessage(msg) {
-  const chatContainer = document.querySelector('.chat-messages')
-  if (!chatContainer) return
+  const messagesList = document.getElementById('messagesList')
+  if (!messagesList) return
 
-  const div = document.createElement('div')
-  div.className = 'chat-message'
-  const name = members[msg.user_id] || 'Unknown'
-  div.textContent = `[${new Date(msg.created_at).toLocaleTimeString()}] ${name}: ${msg.body}`
-  chatContainer.appendChild(div)
-  chatContainer.scrollTop = chatContainer.scrollHeight
-}
-
-async function sendMessage(body) {
-  if (!currentUser || !currentChannel) return
-  const { error } = await supabase.from('messages').insert([{
-    body,
-    server_id: currentChannel.id,
-    user_id: currentUser.id
-  }])
-  if (error) console.error(error)
-}
-
-// ---------- Realtime ----------
-function subscribeMessages(channelId) {
-  if (messagesChannel) {
-    messagesChannel.unsubscribe()
+  const li = document.createElement('li')
+  li.className = 'message'
+  li.setAttribute('role', 'article')
+  
+  const avatar = document.createElement('img')
+  avatar.className = 'msg-avatar'
+  avatar.src = 'https://via.placeholder.com/40'
+  avatar.alt = 'avatar'
+  
+  const msgBody = document.createElement('div')
+  msgBody.className = 'msg-body'
+  
+  const msgMeta = document.createElement('div')
+  msgMeta.className = 'msg-meta'
+  
+  const msgAuthor = document.createElement('span')
+  msgAuthor.className = 'msg-author'
+  msgAuthor.textContent = msg.username
+  
+  const msgTime = document.createElement('span')
+  msgTime.className = 'msg-time'
+  msgTime.textContent = formatTime(msg.time)
+  
+  msgMeta.appendChild(msgAuthor)
+  msgMeta.appendChild(msgTime)
+  
+  const msgText = document.createElement('div')
+  msgText.className = 'msg-text'
+  msgText.textContent = msg.text
+  
+  msgBody.appendChild(msgMeta)
+  msgBody.appendChild(msgText)
+  
+  li.appendChild(avatar)
+  li.appendChild(msgBody)
+  
+  messagesList.appendChild(li)
+  
+  // Scroll to bottom
+  const messagesWrap = document.getElementById('messagesWrap')
+  if (messagesWrap) {
+    messagesWrap.scrollTop = messagesWrap.scrollHeight
   }
+}
 
-  messagesChannel = supabase.channel(`messages-${channelId}`)
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'messages',
-      filter: `server_id=eq.${channelId}`
-    }, payload => appendMessage(payload.new))
-    .subscribe()
+function formatTime(timestamp) {
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+async function sendMessage(text) {
+  if (!currentUser || !currentServer || !text.trim()) return
+  
+  try {
+    const response = await fetch(`${API_BASE}/message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        server: currentServer,
+        username: currentUser.display_name,
+        text: text
+      })
+    })
+    
+    const data = await response.json()
+    if (data.success) {
+      await loadMessages()
+    }
+  } catch (error) {
+    console.error('Error sending message:', error)
+  }
+}
+
+// ---------- Polling for new messages ----------
+function startPolling() {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+  }
+  
+  pollInterval = setInterval(async () => {
+    if (currentServer) {
+      const response = await fetch(`${API_BASE}/data`)
+      const servers = await response.json()
+      const serverData = servers[currentServer]
+      
+      if (serverData && serverData.messages) {
+        const messagesList = document.getElementById('messagesList')
+        const currentCount = messagesList ? messagesList.children.length : 0
+        
+        if (serverData.messages.length > currentCount) {
+          loadMessages()
+        }
+      }
+    }
+  }, 2000)
 }
 
 // ---------- Members UI ----------
 function updateMembersUI() {
-  const membersContainer = document.querySelector('.members-list')
-  if (!membersContainer) return
-  membersContainer.innerHTML = ''
-  Object.values(members).forEach(name => {
-    const div = document.createElement('div')
-    div.className = 'member'
-    div.textContent = name
-    membersContainer.appendChild(div)
+  const memberList = document.getElementById('memberList')
+  if (!memberList) return
+  memberList.innerHTML = ''
+  
+  Object.entries(members).forEach(([id, name]) => {
+    const li = document.createElement('li')
+    li.className = 'member-item'
+    
+    const avatar = document.createElement('img')
+    avatar.className = 'member-avatar'
+    avatar.src = 'https://via.placeholder.com/28'
+    avatar.alt = 'avatar'
+    
+    const meta = document.createElement('div')
+    meta.className = 'member-meta'
+    
+    const nameSpan = document.createElement('span')
+    nameSpan.className = 'member-name'
+    nameSpan.textContent = name
+    
+    const presenceSpan = document.createElement('span')
+    presenceSpan.className = 'member-presence muted'
+    presenceSpan.textContent = 'online'
+    
+    meta.appendChild(nameSpan)
+    meta.appendChild(presenceSpan)
+    
+    li.appendChild(avatar)
+    li.appendChild(meta)
+    
+    memberList.appendChild(li)
   })
+  
+  const memberCount = document.getElementById('memberCount')
+  if (memberCount) {
+    memberCount.textContent = Object.keys(members).length
+  }
+}
+
+function updateUserUI() {
+  const userName = document.getElementById('userName')
+  if (userName && currentUser) {
+    userName.textContent = currentUser.display_name
+  }
 }
 
 // ---------- Event Listeners ----------
 
-// Guest login button
-document.querySelector('.guest-login-btn')?.addEventListener('click', () => guestLogin())
-
-// Create server button
-document.querySelector('.create-server-btn')?.addEventListener('click', () => {
-  const input = document.querySelector('.create-server-input')
-  if (input?.value) createServer(input.value)
-  input.value = ''
+// Sign in button
+document.getElementById('signInBtn')?.addEventListener('click', () => {
+  const name = prompt('Enter your display name:', 'Guest')
+  if (name) {
+    guestLogin(name)
+  }
 })
 
-// Send message on Enter
-document.querySelector('.chat-input')?.addEventListener('keypress', e => {
-  if (e.key === 'Enter' && e.target.value.trim() !== '') {
-    sendMessage(e.target.value)
-    e.target.value = ''
+// Create server button
+document.getElementById('createServerBtn')?.addEventListener('click', () => {
+  const modal = document.getElementById('createServerModal')
+  if (modal) {
+    modal.classList.remove('hidden')
+  }
+})
+
+// Create server form
+document.getElementById('createServerForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const input = document.getElementById('newServerName')
+  if (input && input.value.trim()) {
+    await createServer(input.value.trim())
+    input.value = ''
+    const modal = document.getElementById('createServerModal')
+    if (modal) modal.classList.add('hidden')
+  }
+})
+
+// Modal close buttons
+document.querySelectorAll('[data-action="close"], [data-action="cancel"]').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const modal = e.target.closest('.modal')
+    if (modal) modal.classList.add('hidden')
+  })
+})
+
+// Discover button
+document.getElementById('discoverBtn')?.addEventListener('click', () => {
+  const modal = document.getElementById('discoverModal')
+  if (modal) modal.classList.remove('hidden')
+})
+
+// Message form
+document.getElementById('messageForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const input = document.getElementById('messageInput')
+  if (input && input.value.trim()) {
+    await sendMessage(input.value.trim())
+    input.value = ''
+  }
+})
+
+// Members toggle
+document.getElementById('membersToggleBtn')?.addEventListener('click', () => {
+  const rightPanel = document.getElementById('rightPanel')
+  if (rightPanel) {
+    rightPanel.style.display = rightPanel.style.display === 'none' ? 'flex' : 'none'
   }
 })
 
 // ---------- Initial Load ----------
-guestLogin("Guest")
+window.addEventListener('DOMContentLoaded', () => {
+  guestLogin("Guest")
+})
